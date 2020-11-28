@@ -1,7 +1,8 @@
 # Unicorn HAT HD Clock
 Digital clock with weather status on a Pimoroni Unicorn HAT HD for the Raspberry Pi
 
-## Image
+## Picture
+![Picture of the clock](https://i.imgur.com/lmB21bL.gif)
 
 ## Instructions
 
