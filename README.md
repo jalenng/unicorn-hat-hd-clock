@@ -1,11 +1,8 @@
 # Unicorn HAT HD Clock
 Digital clock with weather status on a Pimoroni Unicorn HAT HD for the Raspberry Pi
-
 ## Picture
 ![Picture of the clock](https://i.imgur.com/lmB21bL.gif)
-
 ## Instructions
-
 ### I. Download the required files
 1. Clone this repository
     - `git clone https://github.com/jalenng/unicorn-hat-hd-clock.git`
@@ -15,11 +12,9 @@ Digital clock with weather status on a Pimoroni Unicorn HAT HD for the Raspberry
     - numpy (`pip install numpy`)
     - requests (`pip install requests`)
     - PIL (`pip install PIL`)
-
 ### II. Configure AccuWeather
 - You will need an AccuWeather API account to get an API key: https://developer.accuweather.com/.
 - Find the AccuWeather location key for your location.
-
 ### III. Configure the options
 1. Open the file ``options.json`` with a text editor
 2. Make the desired edits to the file
@@ -41,20 +36,16 @@ Digital clock with weather status on a Pimoroni Unicorn HAT HD for the Raspberry
         | `enabled`         | `true`            | If `true`, shows and updates weather information
         | `locationKey`     | N/A               | **Important:** Insert your AccuWeather location key here
         | `updateInterval`  | `1800`            | Time in seconds between API calls to get weather data
-
         - `parameterValues` 
             | Name              | Default Value     | Description       |
             | :---------------- | :---------------- | :---------------- |
             | `apikey`          | N/A               | **Important:** Insert your AccuWeather API key here 
             | `language`        | `"en-us"`
             | `details`         | `true` 
-
 3. Save your changes to the file
-
 ### IV. - Run the script
 - Run the script to make sure everything is working as intended.
     - e.g. `python <path to clock.py>`
-
 ### V. Schedule the script to run on startup
 1. Open the file `/etc/rc.local` with a text editor
     - e.g. `sudo nano /etc/rc.local`
