@@ -1,0 +1,22 @@
+{
+    "clock": {
+        "blinkingColon": true,
+        "color": [255, 255, 0]
+    },
+    "display": {
+        "rotation": 180,
+        "minBrightness": 0.05,
+        "maxBrightness": 0.5,
+        "animationTPF": 6
+    },
+    "weather": {
+        "enabled": true,
+        "parameterValues": {
+            "apikey": "INSERT ACCUWEATHER API KEY HERE",
+            "language": "en-us",
+            "details": "true"
+        },
+        "locationKey": "INSERT ACCUWEATHER LOCATION KEY HERE",
+        "updateInterval": 1800
+    }
+}
