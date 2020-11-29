@@ -1,5 +1,7 @@
 {
     "clock": {
+        "12hrFormat": true,
+        "omitLeadingZeros": true,
         "blinkingColon": true,
         "color": [255, 255, 0]
     },
@@ -11,12 +13,13 @@
     },
     "weather": {
         "enabled": true,
-        "parameterValues": {
-            "apikey": "INSERT ACCUWEATHER API KEY HERE",
-            "language": "en-us",
-            "details": "true"
-        },
-        "locationKey": "INSERT ACCUWEATHER LOCATION KEY HERE",
+        "apiKey": "",
+        "locationKey": "",
         "updateInterval": 1800
+    },
+    "sunrise": {
+        "enabled": true,
+        "latitude": 0,
+        "longitude": 0
     }
 }

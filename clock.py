@@ -5,59 +5,72 @@ A digital clock with weather status on a 16x16 Pimoroni Unicorn HAT HD for the R
 
 This script relies on:
     - options.json to store options
-    - weather-icons to store the animated icons in a single-column .png file of 10x10px frames.
-    - AccuWeather to retrieve weather information.
+    - weather-icons to store the animated icons in a single-column .png file of 10x10px frames
+    - AccuWeather to retrieve weather information
+    - https://sunrise-sunset.org/api for sunrise and sunset information to adjust brightness accordingly
 
-Updated 11/27/2020
+Updated 11/29/2020
 GitHub: https://github.com/jalenng/unicorn-hat-hd-clock
 """
 
-# import built-in modules
-import os
-import sys
-import time
+###############################################################################
+# Import modules
+###############################################################################
+
+# Import built-in modules
 from datetime import datetime
 import json
-
-try:
-    import thread
-except:
-    import _thread as thread
+import os
+import sys
+import _thread as thread
+import time
 
 # Import external modules
 try:
     import numpy
-    import requests
     from PIL import Image
+    import requests
 except ImportError:
     print("""
 Check if you have the following modules installed:
     numpy (pip install numpy)
-    requests (pip install requests)
     PIL (pip install PIL)
+    requests (pip install requests)
     """)
     quit()
 
-# Import Unicorn Hat HD module or simulator module
+# Import Unicorn HAT HD module or simulator module
 try:
     import unicornhathd
-    print('Unicorn Hat HD module found.')
+    print('Unicorn HAT HD module found.')
 except ImportError:
-    from unicorn_hat_sim import unicornhathd
-    print('Unicorn Hat HD simulator module found.')
+    try:
+        from unicorn_hat_sim import unicornhathd
+        print('Unicorn HAT HD simulator module found.')
+    except ImportError:
+        print('No Unicorn HAT HD module was found.')
 
 # Load options from options.json
-# try:
-SYS_PATH = sys.path[0]
-options_file = open(os.path.join(SYS_PATH, "options.json"), 'r')
-options_json = json.load(options_file)
+try:
+    SYS_PATH = sys.path[0]
+    options_file = open(os.path.join(SYS_PATH, 'options.json'), 'r')
+    options_json = json.load(options_file)
 
-clock_options = options_json.get('clock')
-display_options = options_json.get('display')
-weather_options = options_json.get('weather')
-# except:
-#     print('Error decoding options.json.')
-#     quit()
+    clock_options = options_json.get('clock')
+    display_options = options_json.get('display')
+    weather_options = options_json.get('weather')
+    sunrise_options = options_json.get('sunrise')
+except ImportError:
+    print('Error decoding options.json.')
+    quit()
+except AttributeError:
+    print('An attribute of options.json cannot be found.')
+    quit()
+
+
+###############################################################################
+# Define constants and variables
+###############################################################################
 
 # Constants
 NUMBER_PATTERNS = [
@@ -149,8 +162,9 @@ COLON_PATTERN = [
     [0, 1, 0],
     [0, 0, 0]
 ]
-CLOCK_Y = 11
 
+TWELVE_HR_FORMAT = clock_options.get('12hrFormat')
+OMIT_LEADING_ZEROS = clock_options.get('omitLeadingZeros')
 BLINKING_COLON = clock_options.get('blinkingColon')
 CLOCK_COLOR = clock_options.get('color')
 
@@ -160,57 +174,129 @@ MAX_BRIGHTNESS = display_options.get('maxBrightness')
 TPF = display_options.get('animationTPF')
 
 WEATHER_ENABLED = weather_options.get('enabled')
-PARAM_VALUES = weather_options.get('parameterValues')
+WEATHER_API_KEY = weather_options.get('apiKey')
 LOCATION_ID = weather_options.get('locationKey')
 FETCH_WEATHER_DATA_INTERVAL = weather_options.get('updateInterval')
 
+SUNRISE_ENABLED = sunrise_options.get('enabled')
+LATITUDE = sunrise_options.get('latitude')
+LONGITUDE = sunrise_options.get('longitude')
+
 # Variables
 global weather_icon
+global brightness_levels
+global fetch_sunrise_data_requested
+global fetch_sunrise_data_started
 weather_icon = -1  # -1: loading. AccuWeather icons are found here: https://developer.accuweather.com/weather-icons
-ticks = 0  # Set ticks variable for animation
-
-# Define brightness levels
-separate_brightness_levels = [0] * 5
-separate_brightness_levels[0] = numpy.linspace(MIN_BRIGHTNESS, MIN_BRIGHTNESS, 20, False, float)[0]  # 12am to 5am
-separate_brightness_levels[1] = numpy.linspace(MIN_BRIGHTNESS, MAX_BRIGHTNESS, 20, False, float)[0]  # 5am to 10am
-separate_brightness_levels[2] = numpy.linspace(MAX_BRIGHTNESS, MAX_BRIGHTNESS, 24, False, float)[0]  # 10am to 4pm
-separate_brightness_levels[3] = numpy.linspace(MAX_BRIGHTNESS, MIN_BRIGHTNESS, 12, False, float)[0]  # 4pm to 7pm
-separate_brightness_levels[4] = numpy.linspace(MIN_BRIGHTNESS, MIN_BRIGHTNESS, 20, False, float)[0]  # 7pm to 12am
-
-# There are 96 total brightness levels to be cycled through every 15 minutes.
 brightness_levels = []
-for i in range(len(separate_brightness_levels)):
-    brightness_levels = numpy.concatenate((brightness_levels, separate_brightness_levels[i]))
-if len(brightness_levels) != 96:
-    print('96 brightness levels expected, but ' + str(len(brightness_levels)) + ' were found.')
-    quit()
-
-# Get shape and set rotation of Unicorn HAT HD
+fetch_sunrise_data_requested = False    # Flag to indicate request for fetching sunrise data
+fetch_sunrise_data_started = False
+draw_colon = TWELVE_HR_FORMAT and OMIT_LEADING_ZEROS  # Colon only in 12-hr format and when leading zeros are omitted
+clock_x_offset = -1 if draw_colon else 0
+clock_y = 11
+ticks = 0  # Set ticks variable for animation
 width, height = unicornhathd.get_shape()
-unicornhathd.rotation(DISPLAY_ROTATION)
-
-# Define API call for weather info
-queries = ''
-at_least_one = False;
-for name in list(PARAM_VALUES):
-    if at_least_one:
-        queries = queries + '&'
-    else:
-        at_least_one = True
-    queries = queries + name + '=' + PARAM_VALUES.get(name)
-
-resource_url = 'http://dataservice.accuweather.com/currentconditions/v1/' + LOCATION_ID + '?' + queries
 
 
-# Define function to get weather data
-def fetch_weather_data():
+###############################################################################
+# Define functions and threads
+###############################################################################
+
+# Define function to convert dictionary of parameter values to a query string
+def convert_dict_to_query_str(param_dict):
+    rtn = ''
+    at_least_one = False
+    for name in list(param_dict):
+        if at_least_one:
+            rtn = rtn + '&'
+        else:
+            at_least_one = True
+        rtn = rtn + name + '=' + str(param_dict.get(name))
+    return rtn
+
+
+# Define function to fetch weather data
+def fetch_weather_data_thread():
     global weather_icon
-    time.sleep(3)
+
+    # Define API call for weather info
+    param_values = {
+        'apikey': WEATHER_API_KEY,
+        'language': 'en-us',
+        'details': True
+    }
+    queries = convert_dict_to_query_str(param_values)
+    resource_url = 'http://dataservice.accuweather.com/currentconditions/v1/' + LOCATION_ID + '?' + queries
+
+    # Perform first GET request 7 seconds after program start
+    time.sleep(3.5)
+
+    # Make the GET request
     while True:
         request_text = requests.get(resource_url).text
-        loaded_request = json.loads(request_text)
-        weather_icon = loaded_request[0].get('WeatherIcon')
+        request_results = json.loads(request_text)
+        weather_icon = request_results[0].get('WeatherIcon')
         time.sleep(FETCH_WEATHER_DATA_INTERVAL)
+
+
+# Define function to fetch sunrise data
+def fetch_sunrise_data_thread():
+    global brightness_levels
+    global fetch_sunrise_data_requested
+    global fetch_sunrise_data_started
+
+    midnight_request_not_fulfilled = fetch_sunrise_data_requested and not fetch_sunrise_data_started
+
+    while True:
+        if len(brightness_levels) == 0 or midnight_request_not_fulfilled:
+            if midnight_request_not_fulfilled:
+                fetch_sunrise_data_started = True
+
+            # Define API call for weather info
+            utc_today = datetime.utcnow()
+            param_values = {
+                'lat': LATITUDE,
+                'lng': LONGITUDE,
+                'date': str(utc_today.year) + '-' + str(utc_today.month) + '-' + str(utc_today.day),
+                'formatted': 0
+            }
+
+            # Define API call for sunrise info
+            queries = ''
+            at_least_one = False
+            for name in list(param_values):
+                if at_least_one:
+                    queries = queries + '&'
+                else:
+                    at_least_one = True
+                queries = queries + name + '=' + str(param_values.get(name))
+            resource_url = 'https://api.sunrise-sunset.org/json?' + queries
+
+            request_text = requests.get(resource_url).text
+            request_results = json.loads(request_text).get('results')
+
+            # Collect sunrise, sunset, and twilight times.
+            sun_times = [
+                datetime.fromisoformat(request_results.get('astronomical_twilight_begin')).astimezone(tz=None),
+                datetime.fromisoformat(request_results.get('sunrise')).astimezone(tz=None),
+                datetime.fromisoformat(request_results.get('sunset')).astimezone(tz=None),
+                datetime.fromisoformat(request_results.get('astronomical_twilight_end')).astimezone(tz=None)
+            ]
+
+            # Calculate the starting indices for each phase.
+            # Each index marks five minutes, and each hour occupies 12 indices
+            for i in range(len(sun_times)):
+                sun_times[i] = int((12 * sun_times[i].hour) + (sun_times[i].minute / 5))
+            sun_times.append(288)
+
+            brightness_levels_section_start = [MIN_BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, MAX_BRIGHTNESS, MIN_BRIGHTNESS]
+            brightness_levels_section_end = [MIN_BRIGHTNESS, MAX_BRIGHTNESS, MAX_BRIGHTNESS, MIN_BRIGHTNESS, MIN_BRIGHTNESS]
+
+            # Define brightness levels
+            brightness_levels = []
+            for (start, end, index) in zip(brightness_levels_section_start, brightness_levels_section_end, sun_times):
+                brightness_levels_section = numpy.linspace(start, end, index - len(brightness_levels), False, float)[0]
+                brightness_levels = numpy.concatenate((brightness_levels, brightness_levels_section))
 
 
 # Define function to draw a pattern
@@ -256,9 +342,19 @@ def draw_animated_image(x, y, image_path, frame_height):
         quit()
 
 
-# Start a thread to manage fetching weather data
+###############################################################################
+# Execute functions
+###############################################################################
+
+# Set display rotation
+unicornhathd.rotation(DISPLAY_ROTATION)
+
+# Start thread to manage fetching data
 if WEATHER_ENABLED:
-    thread.start_new_thread(fetch_weather_data, ())
+    thread.start_new_thread(fetch_weather_data_thread, ())
+if SUNRISE_ENABLED:
+    thread.start_new_thread(fetch_sunrise_data_thread, ())
+
 
 # Draw and update loop
 try:
@@ -271,33 +367,48 @@ try:
         hour = current.hour
         minute = current.minute
         second = current.second
-        microsecond = current.microsecond
+
+        # Make request to fetch sunrise data at midnight
+        if hour == 0 and minute == 28 and second == 0:
+            fetch_sunrise_data_requested = True
+
+        # Clear request flag after one second
+        if hour == 0 and minute == 28 and second == 1:
+            fetch_sunrise_data_requested = False
 
         # Calculate brightness index
-        brightness_index = int((hour * 4) + (minute / 15))
+        brightness_index = int((hour * 12) + (minute / 5))
 
         if brightness_index in range(len(brightness_levels)):
             unicornhathd.brightness(brightness_levels[brightness_index])
 
         # Cast time values to strings
-        hour_str = str(hour % 12).zfill(2)
-        if hour_str == '00':
-            hour_str = '12'
+        if TWELVE_HR_FORMAT:
+            twelve_hour = hour % 12
+            if twelve_hour == 0:
+                hour_str = '12'
+            else:
+                hour_str = str(twelve_hour).zfill(2)
+        else:
+            hour_str = str(hour).zfill(2)
         minute_str = str(minute).zfill(2)
 
-        # Draw clock digits
-        if int(hour_str[0]) != 0:
-            draw_pattern(-1, CLOCK_Y, NUMBER_PATTERNS[int(hour_str[0])])
-        draw_pattern(3, CLOCK_Y, NUMBER_PATTERNS[int(hour_str[1])])
-        draw_pattern(9, CLOCK_Y, NUMBER_PATTERNS[int(minute_str[0])])
-        draw_pattern(13, CLOCK_Y, NUMBER_PATTERNS[int(minute_str[1])])
+        # Draw hour digits
+        if OMIT_LEADING_ZEROS:
+            if int(hour_str[0]) != 0:
+                draw_pattern(0 + clock_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[0])])
+        else:
+            draw_pattern(0 + clock_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[0])])
+        draw_pattern(4 + clock_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[1])])
+
+        # Draw minute digits
+        draw_pattern(9, clock_y, NUMBER_PATTERNS[int(minute_str[0])])
+        draw_pattern(13, clock_y, NUMBER_PATTERNS[int(minute_str[1])])
 
         # Draw colon
-        if BLINKING_COLON:
-            if second % 2 == 0:
-                draw_pattern(6, CLOCK_Y, COLON_PATTERN)
-        else:
-            draw_pattern(6, CLOCK_Y, COLON_PATTERN)
+        if draw_colon:
+            if not BLINKING_COLON or second % 2 == 0:
+                draw_pattern(6, clock_y, COLON_PATTERN)
 
         # Draw weather image
         if WEATHER_ENABLED:
