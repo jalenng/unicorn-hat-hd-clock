@@ -5,14 +5,14 @@ This script relies on:
 - `options.json` to store options
 - weather-icons to store the animated icons in a single-column .png file of 10x10px frames
 - AccuWeather to retrieve weather information
-- https://sunrise-sunset.org/api for sunrise and sunset information to adjust brightness accordingly
-## Picture
-![Picture of the clock](https://i.imgur.com/lmB21bL.gif)
+- https://sunrise-sunset.org/api for sunrise and sunset information to adjust the brightness accordingly
+## GIF
+![GIF of the clock](https://i.imgur.com/lmB21bL.gif)
 ## Instructions
 ### I. Download the required files
 1. Clone this repository
     - `git clone https://github.com/jalenng/unicorn-hat-hd-clock.git`
-2. Ensure you have Python installed
+2. Ensure you have Python 3 installed
     - `python3 --version`
 3. Install the required dependencies:
     - numpy (`pip install numpy`)
@@ -48,9 +48,10 @@ This script relies on:
     - `sunrise`
         | Name              | Default Value     | Description       |
         | :---------------- | :---------------- | :---------------- |
-        | `enabled`         | `true`            | If `true`, updates display brightness according to sunset and sunrise information
+        | `enabled`         | `true`            | If `true`, updates display brightness according to sunset and sunrise information. Otherwise, display brightness will be constantly at `minBrightness`
         | `latitude`        | N/A               | **Important:** Insert your latitude for sunrise/sunset data
         | `longitude`       | N/A               | **Important:** Insert your longitude for sunrise/sunset data
+        | `updateInterval`  | `86400`           | Time in seconds between API calls to get sunset/sunrise data
 3. Save your changes to the file
 ### IV. Run the script
 - Run the script to make sure everything is working as intended.
