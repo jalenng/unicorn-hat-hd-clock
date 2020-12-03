@@ -7,7 +7,7 @@
     },
     "display": {
         "rotation": 180,
-        "minBrightness": 0.05,
+        "minBrightness": 0.004,
         "maxBrightness": 0.5,
         "animationTPF": 6
     },
