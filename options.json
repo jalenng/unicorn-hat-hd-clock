@@ -9,7 +9,7 @@
         "rotation": 180,
         "minBrightness": 0.004,
         "maxBrightness": 0.5,
-        "animationTPF": 6
+        "secondsPerFrame": 0.1
     },
     "weather": {
         "enabled": true,

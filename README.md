@@ -37,7 +37,7 @@ This script relies on:
         | `rotation`        | `180`             | Rotation of the screen
         | `minBrightness`   | `0.004`           | A float between 0.0 and 1.0 that determines the brightness of the screen during the night
         | `maxBrightness`   | `0.5`             | A float between 0.0 and 1.0 that determines the brightness of the screen during the day
-        | `animationTPF`    | `6`               | The number of ticks per frame. The higher the number, the slower the animation.
+        | `secondsPerFrame` | `0.1`             | The duration of each frame. The higher the number, the slower the animation.
     - `weather`
         | Name              | Default Value     | Description       |
         | :---------------- | :---------------- | :---------------- |
