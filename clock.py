@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""" 
+"""
 A digital clock with weather status on a 16x16 Pimoroni Unicorn HAT HD for the Raspberry Pi.
 
 This script relies on:
@@ -9,15 +9,13 @@ This script relies on:
     - AccuWeather to retrieve weather information
     - https://sunrise-sunset.org/api for sunrise and sunset information to adjust brightness accordingly
 
-Updated 11/29/2020
+Updated 12/7/2020
 GitHub: https://github.com/jalenng/unicorn-hat-hd-clock
 """
 
 ###############################################################################
 # Import modules
 ###############################################################################
-
-# Built-in modules
 from datetime import datetime
 import json
 import os
@@ -25,25 +23,23 @@ import sys
 import _thread as thread
 import time
 
-# External modules
 import numpy
 from PIL import Image
 import requests
 
-# Unicorn HAT HD module or simulator module
+from json.decoder import JSONDecodeError
+from requests.exceptions import ConnectionError
+
 try:
     import unicornhathd
-
     print('Unicorn HAT HD module found.')
 except ImportError:
     from unicorn_hat_sim import unicornhathd
-
     print('Unicorn HAT HD simulator module found.')
 
 ###############################################################################
 # Load options.json
 ###############################################################################
-
 try:
     SYS_PATH = sys.path[0]
     options_file = open(os.path.join(SYS_PATH, 'options.json'), 'r')
@@ -53,17 +49,16 @@ try:
     display_options = options_json.get('display')
     weather_options = options_json.get('weather')
     sunrise_options = options_json.get('sunrise')
-except ImportError:
-    print('Error decoding options.json.')
+except ImportError as err:
+    print('Error decoding options.json: ' + str(err))
     quit()
-except AttributeError:
-    print('An attribute of options.json cannot be found.')
+except AttributeError as err:
+    print('An attribute of options.json cannot be found: ' + str(err))
     quit()
 
 ###############################################################################
 # Define constants and variables
 ###############################################################################
-
 # Constants
 NUMBER_PATTERNS = [
     # 0
@@ -164,7 +159,7 @@ CLOCK_COLOR = clock_options.get('color')
 DISPLAY_ROTATION = display_options.get('rotation')
 MIN_BRIGHTNESS = display_options.get('minBrightness')
 MAX_BRIGHTNESS = display_options.get('maxBrightness')
-TPF = display_options.get('animationTPF')
+SPF = display_options.get('secondsPerFrame')
 
 WEATHER_ENABLED = weather_options.get('enabled')
 WEATHER_API_KEY = weather_options.get('apiKey')
@@ -177,27 +172,60 @@ LONGITUDE = sunrise_options.get('longitude')
 FETCH_SUNRISE_DATA_INTERVAL = sunrise_options.get('updateInterval')
 
 # Global variables
+# 0: loading; 1: network error; AccuWeather icons are found here: https://developer.accuweather.com/weather-icons
 global weather_icon_num
-global prev_weather_icon_num  # Used for detecting whether there is a change in weather icon number
 global brightness_levels
-global weather_icon_cache  # Used for saving the weather icon to RAM to minimize reads to SD card
-
-prev_weather_icon_num = -1
-weather_icon_num = 0  # 0: loading. AccuWeather icons are found here: https://developer.accuweather.com/weather-icons
-brightness_levels = [MIN_BRIGHTNESS] * 288
-weather_icon_cache = []
 
 # Other variables
 draw_colon = TWELVE_HR_FORMAT and OMIT_LEADING_ZEROS  # Colon only in 12-hr format and when leading zeros are omitted
-clock_x_offset = -1 if draw_colon else 0
+clock_hour_x_offset = -1 if draw_colon else 0  # If colon is drawn, need to shift hours to the left to make room
 clock_y = 11
 width, height = unicornhathd.get_shape()
-ticks = 0  # Set ticks variable for animation
 
 
 ###############################################################################
 # Define functions and threads
 ###############################################################################
+# Define function to load images into RAM by returning dictionary of (r, g, b) tuples. Goal: minimize SD card reads.
+# Returns a dictionary such that dict[icon_number][frame][x][y] returns the r, g, b value of the pixel at x, y.
+def load_images(relative_path):
+    rtn = {}
+    images_path = os.path.join(SYS_PATH, relative_path)
+    images_list = os.listdir(images_path)
+
+    # Iterate through each file in ./weather-icons
+    for filename in images_list:
+        split_filename = os.path.splitext(filename)
+        file_path = os.path.join(images_path, filename)
+        try:
+            image = Image.open(file_path)
+            image_width = image.width
+            image_height = image.height
+            image_num = int(split_filename[0])
+
+            # If dimensions are suitable, turn image to a 2D array of (r, g, b) tuples
+            if image_height % image_width == 0:
+                number_of_frames = int(image_height / image_width)
+                rtn[image_num] = [
+                    [[(0, 0, 0) for k in range(image_width)] for j in range(image_width)]
+                    for i in range(number_of_frames)]
+
+                for frame_num in range(number_of_frames):
+                    frame_starting_y = frame_num * image_width
+
+                    for px in range(image_width):
+                        for py in range(image_width):
+                            pixel = image.getpixel((px, frame_starting_y + py))
+                            r, g, b = int(pixel[0]), int(pixel[1]), int(pixel[2])
+                            rtn[image_num][frame_num][px][py] = (r, g, b)
+
+        except ValueError:
+            print(file_path + ' does not correspond to an icon number.')
+        except IOError:
+            print(file_path + ' could not be read.')
+
+    return rtn
+
 
 # Define function to convert dictionary of parameter values to a REST query string
 def convert_dict_to_query_str(param_dict):
@@ -212,7 +240,7 @@ def convert_dict_to_query_str(param_dict):
     return rtn
 
 
-# Define thread for fetching weather data
+# Thread for fetching weather data
 def fetch_weather_data_thread():
     global weather_icon_num
 
@@ -225,20 +253,24 @@ def fetch_weather_data_thread():
     queries = convert_dict_to_query_str(param_values)
     resource_url = 'http://dataservice.accuweather.com/currentconditions/v1/' + LOCATION_ID + '?' + queries
 
-    # Perform first GET request 3.5 seconds after program start
-    time.sleep(3.5)
+    # Perform first GET request 10 seconds after program start
+    time.sleep(10)
 
     # Make the GET request, update variables, then wait before repeating
     while True:
-        request_text = requests.get(resource_url).text
-        request_results = json.loads(request_text)
-        weather_icon_num = request_results[0].get('WeatherIcon')
+        try:
+            response = requests.get(resource_url)
+            results = json.loads(response.text)
+            weather_icon_num = results[0].get('WeatherIcon')
+        except (ConnectionError, JSONDecodeError, KeyError) as ex:
+            print(ex)
+            weather_icon_num = -1
 
         # Wait for defined interval before repeating
         time.sleep(FETCH_WEATHER_DATA_INTERVAL)
 
 
-# Define thread for fetching sunrise and sunset data
+# Thread for fetching sunrise and sunset data
 def fetch_sunrise_data_thread():
     global brightness_levels
 
@@ -248,9 +280,6 @@ def fetch_sunrise_data_thread():
         'lng': LONGITUDE,
         'formatted': 0
     }
-
-    # Perform first GET request 3.5 seconds after program start
-    time.sleep(3.5)
 
     # Make the GET request, generate brightness levels, then wait before repeating
     while True:
@@ -263,40 +292,43 @@ def fetch_sunrise_data_thread():
         queries = convert_dict_to_query_str(param_values)
         resource_url = 'https://api.sunrise-sunset.org/json?' + queries
 
-        request_text = requests.get(resource_url).text
-        request_results = json.loads(request_text).get('results')
+        try:
+            response = requests.get(resource_url)
+            results = json.loads(response.text).get('results')
 
-        # Collect sunrise, sunset, and civil twilight begin and end times
-        sun_times = [
-            datetime.fromisoformat(request_results.get('civil_twilight_begin')).astimezone(tz=None),
-            datetime.fromisoformat(request_results.get('sunrise')).astimezone(tz=None),
-            datetime.fromisoformat(request_results.get('sunset')).astimezone(tz=None),
-            datetime.fromisoformat(request_results.get('civil_twilight_end')).astimezone(tz=None)
-        ]
+            # Collect sunrise, sunset, and civil twilight begin and end times
+            sun_times = [
+                datetime.fromisoformat(results.get('civil_twilight_begin')).astimezone(tz=None),
+                datetime.fromisoformat(results.get('sunrise')).astimezone(tz=None),
+                datetime.fromisoformat(results.get('sunset')).astimezone(tz=None),
+                datetime.fromisoformat(results.get('civil_twilight_end')).astimezone(tz=None)
+            ]
 
-        # Calculate the ending indices for each section.
-        # Each index marks five minutes, and each hour occupies 12 indices
-        for i in range(len(sun_times)):
-            sun_times[i] = int((12 * sun_times[i].hour) + (sun_times[i].minute / 5))
-        sun_times.append(288)
+            # Calculate the ending indices for each section.
+            # Each index marks five minutes, and each hour occupies 12 indices
+            for i in range(len(sun_times)):
+                sun_times[i] = int((12 * sun_times[i].hour) + (sun_times[i].minute / 5))
+            sun_times.append(288)
 
-        # Define the starts and ends of each sections' range
-        brightness_levels_section_start = \
-            [MIN_BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, MAX_BRIGHTNESS, MIN_BRIGHTNESS]
-        brightness_levels_section_end = \
-            [MIN_BRIGHTNESS, MAX_BRIGHTNESS, MAX_BRIGHTNESS, MIN_BRIGHTNESS, MIN_BRIGHTNESS]
+            # Define the starts and ends of each sections' range
+            brightness_levels_section_start = \
+                [MIN_BRIGHTNESS, MIN_BRIGHTNESS, MAX_BRIGHTNESS, MAX_BRIGHTNESS, MIN_BRIGHTNESS]
+            brightness_levels_section_end = \
+                [MIN_BRIGHTNESS, MAX_BRIGHTNESS, MAX_BRIGHTNESS, MIN_BRIGHTNESS, MIN_BRIGHTNESS]
 
-        # Define the brightness levels by calculating and appending each section
-        brightness_levels = []
-        for (start, end, index) in zip(brightness_levels_section_start, brightness_levels_section_end, sun_times):
-            brightness_levels_section = numpy.linspace(start, end, index - len(brightness_levels), False)
-            brightness_levels = numpy.concatenate((brightness_levels, brightness_levels_section))
+            # Define the brightness levels by calculating and appending each section
+            brightness_levels = []
+            for (start, end, index) in zip(brightness_levels_section_start, brightness_levels_section_end, sun_times):
+                brightness_levels_section = numpy.linspace(start, end, index - len(brightness_levels), False)
+                brightness_levels = numpy.concatenate((brightness_levels, brightness_levels_section))
+        except (ConnectionError, JSONDecodeError, KeyError) as ex:
+            print(ex)
 
         # Wait for defined interval before repeating
         time.sleep(FETCH_SUNRISE_DATA_INTERVAL)
 
 
-# Define function to draw a pattern defined as a 2D array
+# Function that draws a pattern defined in a 2D array
 def draw_pattern(x, y, pattern, color=CLOCK_COLOR):
     pattern_rows = len(pattern)
     pattern_columns = len(pattern[0])
@@ -309,50 +341,46 @@ def draw_pattern(x, y, pattern, color=CLOCK_COLOR):
                     unicornhathd.set_pixel(y + i, x + j, color[0], color[1], color[2])
 
 
-# Define function to draw an animated image
-def draw_animated_image(x, y, image_path, frame_height):
-    global prev_weather_icon_num
-    global weather_icon_cache
+# Define function to draw the clock
+def draw_clock():
+    # Cast time values to strings
+    if TWELVE_HR_FORMAT:
+        twelve_hour = hour % 12
+        if twelve_hour == 0:
+            hour_str = '12'
+        else:
+            hour_str = str(twelve_hour).zfill(2)
+    else:
+        hour_str = str(hour).zfill(2)
+    minute_str = str(minute).zfill(2)
 
-    # If there is a change in the weather icon number
-    if weather_icon_num != prev_weather_icon_num:
+    # Draw hour digits
+    if OMIT_LEADING_ZEROS:
+        if int(hour_str[0]) != 0:
+            draw_pattern(0 + clock_hour_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[0])])
+    else:
+        draw_pattern(0 + clock_hour_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[0])])
+    draw_pattern(4 + clock_hour_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[1])])
 
-        # Clear the weather icon cache
-        prev_weather_icon_num = weather_icon_num
-        weather_icon_cache = []
+    # Draw minute digits
+    draw_pattern(9, clock_y, NUMBER_PATTERNS[int(minute_str[0])])
+    draw_pattern(13, clock_y, NUMBER_PATTERNS[int(minute_str[1])])
 
-        # Try to read and cache the new weather icon image file
-        try:
-            image = Image.open(image_path)
-            image_width = image.width
-            image_height = image.height
+    # Draw colon
+    if draw_colon:
+        if not BLINKING_COLON or second % 2 == 0:
+            draw_pattern(6, clock_y, COLON_PATTERN)
 
-            if image_height % frame_height == 0:
-                number_of_frames = int(image_height / frame_height)
-                weather_icon_cache = [[[(0, 0, 0) for k in range(frame_height)] for j in range(image_width)]
-                                      for i in range(number_of_frames)]
 
-                for i in range(number_of_frames):
-                    frame_starting_y = i * frame_height
+# Define function to draw weather icon
+def draw_weather_icon(x, y):
+    image_array = weather_icon_dict[weather_icon_num]
+    frame_index = int(time.process_time() / SPF) % len(image_array)
+    frame_array = image_array[frame_index]
 
-                    for px in range(image_width):
-                        for py in range(frame_height):
-                            pixel = image.getpixel((px, frame_starting_y + py))
-                            r, g, b = int(pixel[0]), int(pixel[1]), int(pixel[2])
-                            weather_icon_cache[i][px][py] = (r, g, b)
-
-        except IOError:
-            print(image_path + ' cannot be found.')
-            quit()
-
-    # Read from the cache and update the Unicorn HAT HD pixels accordingly
-    frame_index = int(ticks / TPF) % len(weather_icon_cache)
-    weather_icon_cache_frame = weather_icon_cache[frame_index]
-
-    for px in range(len(weather_icon_cache_frame)):
-        for py in range(len(weather_icon_cache_frame[px])):
-
-            pixel = weather_icon_cache_frame[px][py]
+    for px in range(len(frame_array)):
+        for py in range(len(frame_array[px])):
+            pixel = frame_array[px][py]
             r, g, b = int(pixel[0]), int(pixel[1]), int(pixel[2])
 
             converted_x = y + py
@@ -365,18 +393,20 @@ def draw_animated_image(x, y, image_path, frame_height):
 ###############################################################################
 # Execute functions
 ###############################################################################
-
-# Set display rotation
-unicornhathd.rotation(DISPLAY_ROTATION)
-
-# Start thread to manage fetching data
-if WEATHER_ENABLED:
-    thread.start_new_thread(fetch_weather_data_thread, ())
-if SUNRISE_ENABLED:
-    thread.start_new_thread(fetch_sunrise_data_thread, ())
-
-# Draw and update loop
 try:
+    # Set display rotation
+    unicornhathd.rotation(DISPLAY_ROTATION)
+
+    # Start thread to manage fetching data
+    brightness_levels = [MIN_BRIGHTNESS] * 288
+    if WEATHER_ENABLED:
+        weather_icon_dict = load_images('weather-icons')
+        weather_icon_num = 0
+        thread.start_new_thread(fetch_weather_data_thread, ())
+    if SUNRISE_ENABLED:
+        thread.start_new_thread(fetch_sunrise_data_thread, ())
+
+    # Draw and update loop
     while True:
         # Clear hat
         unicornhathd.clear()
@@ -387,49 +417,22 @@ try:
         minute = current.minute
         second = current.second
 
-        # Calculate brightness index
+        # Calculate brightness index and set brightness
         brightness_index = int((hour * 12) + (minute / 5))
-
         if brightness_index in range(len(brightness_levels)):
             unicornhathd.brightness(brightness_levels[brightness_index])
 
-        # Cast time values to strings
-        if TWELVE_HR_FORMAT:
-            twelve_hour = hour % 12
-            if twelve_hour == 0:
-                hour_str = '12'
-            else:
-                hour_str = str(twelve_hour).zfill(2)
-        else:
-            hour_str = str(hour).zfill(2)
-        minute_str = str(minute).zfill(2)
-
-        # Draw hour digits
-        if OMIT_LEADING_ZEROS:
-            if int(hour_str[0]) != 0:
-                draw_pattern(0 + clock_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[0])])
-        else:
-            draw_pattern(0 + clock_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[0])])
-        draw_pattern(4 + clock_x_offset, clock_y, NUMBER_PATTERNS[int(hour_str[1])])
-
-        # Draw minute digits
-        draw_pattern(9, clock_y, NUMBER_PATTERNS[int(minute_str[0])])
-        draw_pattern(13, clock_y, NUMBER_PATTERNS[int(minute_str[1])])
-
-        # Draw colon
-        if draw_colon:
-            if not BLINKING_COLON or second % 2 == 0:
-                draw_pattern(6, clock_y, COLON_PATTERN)
+        # Draw clock
+        draw_clock()
 
         # Draw weather image
         if WEATHER_ENABLED:
-            image_filename = 'weather-icons/' + str(weather_icon_num) + '.png'
-            draw_animated_image(3, 0, os.path.join(SYS_PATH, image_filename), 10)
-            ticks += 1
+            draw_weather_icon(3, 0)
 
         # Send buffer to the Unicorn HAT HD for showing
         unicornhathd.show()
 
 # Ctrl-C
 except KeyboardInterrupt:
+    print('Keyboard interrupt detected. Turning off Unicorn HAT HD.')
     unicornhathd.off()
