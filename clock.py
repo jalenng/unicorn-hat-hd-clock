@@ -181,6 +181,7 @@ draw_colon = TWELVE_HR_FORMAT and OMIT_LEADING_ZEROS  # Colon only in 12-hr form
 clock_hour_x_offset = -1 if draw_colon else 0  # If colon is drawn, need to shift hours to the left to make room
 clock_y = 11
 width, height = unicornhathd.get_shape()
+ticks = 0
 
 
 ###############################################################################
@@ -375,7 +376,7 @@ def draw_clock():
 # Define function to draw weather icon
 def draw_weather_icon(x, y):
     image_array = weather_icon_dict[weather_icon_num]
-    frame_index = int(time.process_time() / SPF) % len(image_array)
+    frame_index = ticks % len(image_array)
     frame_array = image_array[frame_index]
 
     for px in range(len(frame_array)):
@@ -432,7 +433,13 @@ try:
         # Send buffer to the Unicorn HAT HD for showing
         unicornhathd.show()
 
+        ticks += 1
+        time.sleep(SPF)
+
 # Ctrl-C
 except KeyboardInterrupt:
     print('Keyboard interrupt detected. Turning off Unicorn HAT HD.')
     unicornhathd.off()
+except BaseException:
+    print('Unknown error. Restarting.')
+    os.execv(sys.executable, ['python'] + sys.argv)
