@@ -340,6 +340,8 @@ def draw_pattern(x, y, pattern, color=CLOCK_COLOR):
             if converted_x in range(width) and converted_y in range(height):
                 if pattern[i][j] == 1:
                     unicornhathd.set_pixel(y + i, x + j, color[0], color[1], color[2])
+                else:
+                    unicornhathd.set_pixel(y + i, x + j, 0, 0, 0)
 
 
 # Define function to draw the clock
