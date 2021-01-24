@@ -15,7 +15,10 @@
         "enabled": true,
         "apiKey": "",
         "locationKey": "",
-        "updateInterval": 1800
+        "updateInterval": 1800,
+        "showTemperature": true,
+        "temperatureColor": [255, 128, 0],
+        "imperialSystem": true
     },
     "sunrise": {
         "enabled": true,

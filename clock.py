@@ -9,7 +9,7 @@ This script relies on:
     - AccuWeather to retrieve weather information
     - https://sunrise-sunset.org/api for sunrise and sunset information to adjust brightness accordingly
 
-Updated 12/7/2020
+Updated 1/23/2021
 GitHub: https://github.com/jalenng/unicorn-hat-hd-clock
 """
 
@@ -150,6 +150,22 @@ COLON_PATTERN = [
     [0, 0, 0]
 ]
 
+DEGREE_PATTERN = [
+    [1, 1, 0],
+    [1, 1, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0]
+]
+
+HYPHEN_PATTERN = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [1, 1, 1],
+    [0, 0, 0],
+    [0, 0, 0]
+]
+
 # From options.json
 TWELVE_HR_FORMAT = clock_options.get('12hrFormat')
 OMIT_LEADING_ZEROS = clock_options.get('omitLeadingZeros')
@@ -165,6 +181,9 @@ WEATHER_ENABLED = weather_options.get('enabled')
 WEATHER_API_KEY = weather_options.get('apiKey')
 LOCATION_ID = weather_options.get('locationKey')
 FETCH_WEATHER_DATA_INTERVAL = weather_options.get('updateInterval')
+SHOW_TEMPERATURE = weather_options.get('showTemperature')
+TEMPERATURE_COLOR = weather_options.get('temperatureColor')
+IMPERIAL_SYSTEM = weather_options.get('imperialSystem')
 
 SUNRISE_ENABLED = sunrise_options.get('enabled')
 LATITUDE = sunrise_options.get('latitude')
@@ -174,6 +193,7 @@ FETCH_SUNRISE_DATA_INTERVAL = sunrise_options.get('updateInterval')
 # Global variables
 # 0: loading; 1: network error; AccuWeather icons are found here: https://developer.accuweather.com/weather-icons
 global weather_icon_num
+global weather_temp
 global brightness_levels
 
 # Other variables
@@ -217,8 +237,8 @@ def load_images(relative_path):
                     for px in range(image_width):
                         for py in range(image_width):
                             pixel = image.getpixel((px, frame_starting_y + py))
-                            r, g, b = int(pixel[0]), int(pixel[1]), int(pixel[2])
-                            rtn[image_num][frame_num][px][py] = (r, g, b)
+                            r, g, b, a = int(pixel[0]), int(pixel[1]), int(pixel[2]), int(pixel[3])
+                            rtn[image_num][frame_num][px][py] = (r, g, b, a)
 
         except ValueError:
             print(file_path + ' does not correspond to an icon number.')
@@ -244,6 +264,7 @@ def convert_dict_to_query_str(param_dict):
 # Thread for fetching weather data
 def fetch_weather_data_thread():
     global weather_icon_num
+    global weather_temp
 
     # Define API call for weather info
     param_values = {
@@ -263,6 +284,7 @@ def fetch_weather_data_thread():
             response = requests.get(resource_url)
             results = json.loads(response.text)
             weather_icon_num = results[0].get('WeatherIcon')
+            weather_temp = results[0].get('Temperature').get('Imperial').get('Value') if IMPERIAL_SYSTEM else results[0].get('Temperature').get('Metric').get('Value')
         except (ConnectionError, JSONDecodeError, KeyError) as ex:
             print(ex)
             weather_icon_num = -1
@@ -342,6 +364,27 @@ def draw_pattern(x, y, pattern, color=CLOCK_COLOR):
                     unicornhathd.set_pixel(y + i, x + j, color[0], color[1], color[2])
 
 
+# Define function to draw the temperature
+def draw_temperature():
+    
+    # Cast temperature value to a string
+    if weather_temp is None:
+        temp_string = "-"
+        temp_starting_x = int((width - 6) / 2)
+
+        # Draw hyphen
+        draw_pattern(temp_starting_x, clock_y, HYPHEN_PATTERN, TEMPERATURE_COLOR)
+    else:
+        temp_string = str(int(weather_temp))
+        temp_starting_x = int((width - ((len(temp_string) * 4) + 2)) / 2)
+
+        # Draw temperature digits
+        for i in range(len(temp_string)): 
+            draw_pattern(temp_starting_x + (i * 4), clock_y, NUMBER_PATTERNS[int(temp_string[i])], TEMPERATURE_COLOR)
+
+    # Draw degree symbol
+    draw_pattern(temp_starting_x + ((len(temp_string)) * 4), clock_y, DEGREE_PATTERN, TEMPERATURE_COLOR)
+
 # Define function to draw the clock
 def draw_clock():
     # Cast time values to strings
@@ -382,13 +425,14 @@ def draw_weather_icon(x, y):
     for px in range(len(frame_array)):
         for py in range(len(frame_array[px])):
             pixel = frame_array[px][py]
-            r, g, b = int(pixel[0]), int(pixel[1]), int(pixel[2])
+            r, g, b, a = int(pixel[0]), int(pixel[1]), int(pixel[2]), int(pixel[3])
 
-            converted_x = y + py
-            converted_y = x + px
+            if a != 0:
+                converted_x = y + py
+                converted_y = x + px
 
-            if converted_x in range(width) and converted_y in range(height):
-                unicornhathd.set_pixel(converted_x, converted_y, r, g, b)
+                if converted_x in range(width) and converted_y in range(height):
+                    unicornhathd.set_pixel(converted_x, converted_y, r, g, b)
 
 
 ###############################################################################
@@ -403,6 +447,7 @@ try:
     if WEATHER_ENABLED:
         weather_icon_dict = load_images('weather-icons')
         weather_icon_num = 0
+        weather_temp = None
         thread.start_new_thread(fetch_weather_data_thread, ())
     if SUNRISE_ENABLED:
         thread.start_new_thread(fetch_sunrise_data_thread, ())
@@ -423,8 +468,11 @@ try:
         if brightness_index in range(len(brightness_levels)):
             unicornhathd.brightness(brightness_levels[brightness_index])
 
-        # Draw clock
-        draw_clock()
+        # Draw clock or temperature
+        if WEATHER_ENABLED and SHOW_TEMPERATURE and ticks % 50 < 25:
+            draw_temperature()
+        else:
+            draw_clock()
 
         # Draw weather image
         if WEATHER_ENABLED:

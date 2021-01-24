@@ -45,6 +45,9 @@ This script relies on:
         | `apiKey`          | N/A               | **Important:** Insert your AccuWeather API key here 
         | `locationKey`     | N/A               | **Important:** Insert your AccuWeather location key here
         | `updateInterval`  | `1800`            | Time in seconds between API calls to get weather data
+        | `showTemperature` | `true`            | If `true`, the clock will cycle between the time and temperature. This attribute is effective only if `enabled` is `true`.
+        | `temperatureColor`| `[255, 128, 0]`   | An array of values in RGB order. Determines the color of the temperature.
+        | `imperialSystem`  | `true`            | If `true`, the temperature is displayed in Fahrenheit. Otherwise, the temperature is displayed in Celsius.
     - `sunrise`
         | Name              | Default Value     | Description       |
         | :---------------- | :---------------- | :---------------- |
