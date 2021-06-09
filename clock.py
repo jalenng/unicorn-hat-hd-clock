@@ -9,7 +9,7 @@ This script relies on:
     - AccuWeather to retrieve weather information
     - https://sunrise-sunset.org/api for sunrise and sunset information to adjust brightness accordingly
 
-Updated 1/23/2021
+Updated 6/9/2021
 GitHub: https://github.com/jalenng/unicorn-hat-hd-clock
 """
 
@@ -316,7 +316,7 @@ def fetch_sunrise_data_thread():
         resource_url = 'https://api.sunrise-sunset.org/json?' + queries
 
         try:
-            response = requests.get(resource_url)
+            response = requests.get(resource_url, verify=False)
             results = json.loads(response.text).get('results')
 
             # Collect sunrise, sunset, and civil twilight begin and end times
