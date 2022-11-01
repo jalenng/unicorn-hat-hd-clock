@@ -1,24 +1,21 @@
 {
     "clock": {
         "12hrFormat": true,
+        "demo": false,
         "omitLeadingZeros": true,
-        "blinkingColon": true,
-        "color": [255, 255, 0]
+        "color": [255, 255, 255]
     },
-    "display": {
-        "rotation": 180,
-        "minBrightness": 0.004,
+    "led": {
+        "fps": 10,
+        "minBrightness": 0.03,
         "maxBrightness": 0.5,
-        "secondsPerFrame": 0.1
+        "rotation": 90
     },
     "weather": {
         "enabled": true,
         "apiKey": "",
         "locationKey": "",
-        "updateInterval": 1800,
-        "showTemperature": true,
-        "temperatureColor": [255, 128, 0],
-        "imperialSystem": true
+        "updateInterval": 1800
     },
     "sunrise": {
         "enabled": true,

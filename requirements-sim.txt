@@ -1,0 +1,3 @@
+unicorn_hat_sim
+requests
+Pillow

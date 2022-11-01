@@ -1,0 +1,3 @@
+unicornhathd
+requests
+Pillow
