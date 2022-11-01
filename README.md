@@ -37,8 +37,8 @@ This script relies on:
     - `pip install -r requirements.txt`
     - `pip install -r requirements-sim.txt` (if using the [simulator](https://github.com/jayniz/unicorn-hat-sim))
 ### II. Configure AccuWeather
-- You will need an AccuWeather API account to get an API key: https://developer.accuweather.com/.
-- Find the AccuWeather location key for your location.
+- You will need an AccuWeather API account to get an API key: https://developer.accuweather.com/
+- Find the AccuWeather location key for your location
 ### III. Configure the options
 1. Open the file `options.json` with a text editor
 2. Make the desired edits to the file
@@ -72,12 +72,28 @@ This script relies on:
         | `updateInterval`  | `86400`           | Time in seconds between API calls to get sunset/sunrise data
 3. Save your changes to the file
 ### IV. Run the script
-- Run the script to make sure everything is working as intended.
-    - e.g. `python3 main.py`
+- Run the script to make sure everything is working as intended
+    - `python3 main.py`
 ### V. Schedule the script to run on startup
-1. Open the file `/etc/rc.local` with a text editor
-    - e.g. `sudo nano /etc/rc.local`
-2. Before the line that says `exit 0`, add the line `python3 <path to main.py> &`
-    - e.g. `python3 /home/pi/unicorn-hat-hd-clock/main.py &`
-    - Be sure to include the `&` at the end
-3. Save your changes to the file
+We will use systemd to run this script on startup as a background process
+
+1. Create a file called `clock.service` with a text editor in `/etc/systemd/system`
+    - e.g. `sudo touch /etc/systemd/system/clock.service`
+2. Open the file you just created
+    - e.g. `sudo nano /etc/systemd/system/clock.service`
+3. Create the service file. Use this as an example:
+    ```
+    [Unit]
+    Description=Unicorn HAT HD Clock
+    Before=multi-user.target
+
+    [Service]
+    ExecStart=python3 <path to main.py>
+    Type=simple
+    Restart=always
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+3. Enable the service
+    - `sudo systemctl enable /etc/systemd/system/clock.service`
