@@ -56,7 +56,10 @@ def fetch_sunrise_data_thread():
             sun_times = None
 
         # Wait for defined interval before repeating
-        time.sleep(sunrise_options.get('updateInterval', 86400))
+        update_interval = sunrise_options.get('updateInterval', 86400)
+        retry_interval = sunrise_options.get('retryInterval', 60)
+        sleep_time = retry_interval if sun_times == None else update_interval
+        time.sleep(sleep_time)
 
 
 def get_brightness_level():

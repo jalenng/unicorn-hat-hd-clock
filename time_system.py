@@ -29,7 +29,8 @@ def update_time():
         if (os.system('ntpdate -u pool.ntp.org') == 0):
             time_updated = True
         else:
-            time.sleep(60)
+            sleep_time = clock_options.get('retryInterval', 60)
+            time.sleep(sleep_time)
 
 
 thread.start_new_thread(update_time, ())

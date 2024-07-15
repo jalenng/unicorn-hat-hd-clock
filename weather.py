@@ -50,7 +50,10 @@ def fetch_weather_data_thread():
             weather_code = -1
 
         # Wait for defined interval before repeating
-        time.sleep(weather_options.get('updateInterval', 1800))
+        update_interval = weather_options.get('updateInterval', 1800)
+        retry_interval = weather_options.get('retryInterval', 60)
+        sleep_time = retry_interval if weather_code == -1 else update_interval
+        time.sleep(sleep_time)
 
 
 if weather_options.get('enabled', False):
