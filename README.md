@@ -49,6 +49,7 @@ This script relies on:
         | `demo`            | `false`           | If `true`, the time is sped up, and the screen cycles through the various icons
         | `omitLeadingZeros`| `true`            | If `true`, the leading zeroes of the hour are dropped. Otherwise, include the leading zeros.
         | `color`           | `[255, 255, 255]` | An array of values in RGB order. Determines the color of the clock.
+        | `retryInterval`   | `60`              | Time in seconds between retry attempts if the API call fails
     - `led`
         | Name              | Default Value     | Description       |
         | :---------------- | :---------------- | :---------------- |
@@ -63,6 +64,7 @@ This script relies on:
         | `apiKey`          | N/A               | **Important:** Insert your AccuWeather API key here 
         | `locationKey`     | N/A               | **Important:** Insert your AccuWeather location key here
         | `updateInterval`  | `1800`            | Time in seconds between API calls to get weather data
+        | `retryInterval`   | `60`              | Time in seconds between retry attempts if the API call fails
     - `sunrise`
         | Name              | Default Value     | Description       |
         | :---------------- | :---------------- | :---------------- |
@@ -70,6 +72,7 @@ This script relies on:
         | `latitude`        | N/A               | **Important:** Insert your latitude for sunrise/sunset data
         | `longitude`       | N/A               | **Important:** Insert your longitude for sunrise/sunset data
         | `updateInterval`  | `86400`           | Time in seconds between API calls to get sunset/sunrise data
+        | `retryInterval`   | `60`              | Time in seconds between retry attempts if the API call fails
 3. Save your changes to the file
 ### IV. Run the script
 - Run the script to make sure everything is working as intended

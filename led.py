@@ -44,15 +44,16 @@ def draw_frame(frame, x, y, filters=[]):
                 continue
             elif in_alpha == 255:
                 add_px = in_rgb
+                old_px = [0, 0, 0]
             else:
-                in_alpha = float(in_alpha) / 255
-                add_px = [int(val * in_alpha) for val in in_rgb]
+                in_alpha_decimal = float(in_alpha_decimal) / 255
+                add_px = [int(val * in_alpha_decimal) for val in in_rgb]
+                old_px = [int(val * (1 - in_alpha_decimal)) for val in old_px]
 
             new_px = [old + new for old, new in zip(old_px, add_px)]
             new_px = [min(max(val, 0), 255) for val in new_px]
 
             buffer[yy2][xx2] = new_px
-            # hat.set_pixel(*map_coords(xx2, yy2), *(new_px))
 
 
 def apply_filters(in_rgb, filters):

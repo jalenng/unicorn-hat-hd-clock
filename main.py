@@ -54,23 +54,23 @@ code_to_sprite = {
 
 frame_rate = {
     'disconnected': 1,
-    'loading': 10,
+    'loading': 6,
     'sun': 0.5,
     'sun and cloud': 0.5,
     'sun and haze': 0.5,
-    'clouds': 0.25,
-    'fog': 2,
-    'rain': 5,
-    'rain and cloud': 5,
-    'storm': 10,
+    'clouds': 0.5,
+    'fog': 0.5,
+    'rain': 6,
+    'rain and cloud': 6,
+    'storm': 6,
     'snow': 2,
     'snow and cloud': 2,
-    'hot': 5,
-    'cold': 5,
-    'wind': 5,
-    'moon': 5,
-    'moon and cloud': 0.125,
-    'moon and haze': 0.125,
+    'hot': 6,
+    'cold': 12,
+    'wind': 6,
+    'moon': 0,
+    'moon and cloud': 0.5,
+    'moon and haze': 0,
 }
 
 TWELVE_HR_FORMAT = clock_options.get('12hrFormat', False)
@@ -98,16 +98,14 @@ def draw_time():
     minute_str = str(minute).zfill(2)
 
     # Draw hour digits
-    hour_x_offset = 0
+    origin = (2, 3)
     if not (OMIT_LEADING_ZERO and int(hour_str[0]) == 0):
-        draw_frame(cache['digits'][int(hour_str[0])],
-                   9 + hour_x_offset, 5, filters)
-    draw_frame(cache['digits'][int(hour_str[1])],
-               13 + hour_x_offset, 5, filters)
+        draw_frame(cache['digits'][int(hour_str[0])], origin[0], origin[1], filters)
+    draw_frame(cache['digits'][int(hour_str[1])], origin[0] + 6, origin[1], filters)
 
     # Draw minute digits
-    draw_frame(cache['digits'][int(minute_str[0])], 9, 11, filters)
-    draw_frame(cache['digits'][int(minute_str[1])], 13, 11, filters)
+    draw_frame(cache['digits'][int(minute_str[0])], origin[0], origin[1] + 6, filters)
+    draw_frame(cache['digits'][int(minute_str[1])], origin[0] + 6, origin[1] + 6, filters)
 
 
 def draw_weather():
@@ -131,26 +129,27 @@ def draw_weather():
 
 def draw_blinker():
     ticks = get_time().second % 2 == 0
-    color = [0, 0, 0]
     if ticks % 2 == 0:
         if get_time_updated():
             color = [128, 128, 128]
         else:
-            color = [255, 0, 0] # red
-    set_px(0, 15, color, filters)
+            color = [128, 0, 0] # red
+
+        filters = [('multiply', color)]
+        draw_frame(cache['digits'][10], -2, 9, filters)
 
 
 def draw():
-    draw_time()
     draw_weather()
     draw_blinker()
+    draw_time()
 
 
 if __name__ == '__main__':
 
     # Import sprites
     digits_path = os.path.join(sys.path[0], 'sprites', 'digits.png')
-    import_sprite(digits_path, (3, 5), 1)
+    import_sprite(digits_path, (8, 8), 1)
 
     sprites_path = os.path.join(sys.path[0], 'sprites', 'weather_icons')
     sprites_list = os.listdir(sprites_path)

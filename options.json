@@ -3,7 +3,8 @@
         "12hrFormat": true,
         "demo": false,
         "omitLeadingZeros": true,
-        "color": [255, 255, 255]
+        "color": [255, 255, 255],
+        "retryInterval": 60
     },
     "led": {
         "fps": 10,
@@ -15,12 +16,14 @@
         "enabled": true,
         "apiKey": "",
         "locationKey": "",
-        "updateInterval": 1800
+        "updateInterval": 1800,
+        "retryInterval": 60
     },
     "sunrise": {
         "enabled": true,
         "latitude": 0,
         "longitude": 0,
-        "updateInterval": 86400
+        "updateInterval": 86400,
+        "retryInterval": 60
     }
 }
