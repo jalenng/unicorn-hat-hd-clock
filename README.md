@@ -5,27 +5,26 @@ This script relies on:
 - AccuWeather to retrieve weather information
 - https://sunrise-sunset.org/api for sunrise and sunset information to adjust the brightness accordingly
 ## GIFs
-![GIF of the clock](https://user-images.githubusercontent.com/42555186/199179508-c477e8ba-bc36-42db-8626-b16badf9cce3.gif)
+![Photo of the clock](https://github.com/user-attachments/assets/63523a04-2027-4ba8-a1f9-cef3b82d814c)
 
-![sun](https://user-images.githubusercontent.com/42555186/199180158-473950e8-c768-409e-b6e2-1d3ade414937.gif)
-![sun and cloud](https://user-images.githubusercontent.com/42555186/199180157-f90b5b6f-f507-46f1-b067-a293b8da0c1d.gif)
-![clouds](https://user-images.githubusercontent.com/42555186/199180140-f91f2515-b1ab-449a-9f8a-f64a8f65c585.gif)
-![fog](https://user-images.githubusercontent.com/42555186/199180143-5308898e-13d8-49e8-ae47-844d671205cf.gif)
-
-![rain](https://user-images.githubusercontent.com/42555186/199181173-a0a867d2-9467-4707-90b6-c2b8b24f3dc0.gif)
-![rain and cloud](https://user-images.githubusercontent.com/42555186/199180153-8236f758-2eba-4114-a35e-90b9b8658366.gif)
-![storm](https://user-images.githubusercontent.com/42555186/199180156-16c4ccbc-7ae6-421d-b07d-8632c265a1ae.gif)
-![snow](https://user-images.githubusercontent.com/42555186/199181172-3094c16e-c484-46c7-98a2-91471df33923.gif)
-
-![snow and cloud](https://user-images.githubusercontent.com/42555186/199180154-aa802605-3d4f-425a-861b-2b44486a0f13.gif)
-![hot](https://user-images.githubusercontent.com/42555186/199180144-f32f8954-738c-4e5a-a583-e600b7d0bf30.gif)
-![cold](https://user-images.githubusercontent.com/42555186/199187852-03e96545-953c-44c5-8e05-5bcfe106581d.png)
-![wind](https://user-images.githubusercontent.com/42555186/199180136-f6d820ad-29f4-4870-92c9-745b2c409eab.gif)
-
-![moon](https://user-images.githubusercontent.com/42555186/199187848-6083a6fb-1cfc-48cf-abca-75338f910156.png)
-![moon and cloud](https://user-images.githubusercontent.com/42555186/199187842-43ee1913-e857-4e8c-af0b-c2e6068faf5a.gif)
-![loading](https://user-images.githubusercontent.com/42555186/199180147-481e3ec5-8e48-4521-807d-4b488770900e.gif)
-![disconnected](https://user-images.githubusercontent.com/42555186/199188347-52d12ed5-3178-4f85-be34-b1087ac828ad.gif)
+![wind](https://github.com/user-attachments/assets/1e3cdf90-f307-4104-978f-d70bd5065171)
+![sun](https://github.com/user-attachments/assets/d5dd5a09-81a2-40c8-a3c5-a41aafacf408)
+![sun and haze](https://github.com/user-attachments/assets/745e455f-a051-4a81-9e9e-31946dee1600)
+![sun and cloud](https://github.com/user-attachments/assets/800cd348-151d-4a20-bb9c-f95af148974f)
+![storm](https://github.com/user-attachments/assets/56313ad1-64d2-4c0b-bec0-efe25e2d680f)
+![snow](https://github.com/user-attachments/assets/2f21bfa4-db4c-4f1f-8d64-c6fe366b81c7)
+![snow and cloud](https://github.com/user-attachments/assets/150a68f6-2b82-435e-a63c-084ab05e6186)
+![rain](https://github.com/user-attachments/assets/bb5672d2-a7c5-493a-993c-11eb6b4e551c)
+![rain and cloud](https://github.com/user-attachments/assets/d5c8da42-6f6b-4343-9fa0-5b367b99c3f1)
+![moon](https://github.com/user-attachments/assets/1c1c9ec0-5c22-495e-adb9-4cc358a3063a)
+![moon and haze](https://github.com/user-attachments/assets/766235b4-e0eb-4ba7-b348-f9074cf91cd5)
+![moon and cloud](https://github.com/user-attachments/assets/b2953269-53ec-4d61-9bb7-bba69e12b2af)
+![loading](https://github.com/user-attachments/assets/d2aa19eb-11bd-40f0-b981-f8c40b8108dc)
+![hot](https://github.com/user-attachments/assets/2fbb64c5-0a72-43a7-b41a-3b48de6509de)
+![fog](https://github.com/user-attachments/assets/c45ac345-1615-4db9-81d7-4184551c3c9f)
+![disconnected](https://github.com/user-attachments/assets/4eb29f4f-30d7-43fc-9e17-c6c25952ff72)
+![cold](https://github.com/user-attachments/assets/5fbc579d-75e7-4542-b8c9-ae6ab0c826dc)
+![clouds](https://github.com/user-attachments/assets/5c29044c-39bd-4939-8cdc-ed4591a60242)
 
 ## Instructions
 ### I. Download the required files
