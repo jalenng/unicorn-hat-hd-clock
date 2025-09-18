@@ -4,79 +4,35 @@ import time
 from time_system import get_time, get_time_updated
 from sprite_cache import cache, import_sprite
 from led import draw_frame, loop_draw, set_px
-from weather import get_code
+from weather import get_weather_sprite
 from options import clock_options
-
-code_to_sprite = {
-    -1: 'disconnected',
-    0: 'loading',
-    1: 'sun',
-    2: 'sun',
-    3: 'sun and cloud',
-    4: 'sun and cloud',
-    5: 'sun and haze',
-    6: 'clouds',
-    7: 'clouds',
-    8: 'clouds',
-    11: 'fog',
-    12: 'rain',
-    13: 'rain and cloud',
-    14: 'rain and cloud',
-    15: 'storm',
-    16: 'storm',
-    17: 'storm',
-    18: 'rain and cloud',
-    19: 'snow',
-    20: 'snow and cloud',
-    21: 'snow and cloud',
-    22: 'snow',
-    23: 'snow and cloud',
-    24: 'snow',
-    25: 'snow',
-    26: 'snow',
-    29: 'snow',
-    30: 'hot',
-    31: 'cold',
-    32: 'wind',
-    33: 'moon',
-    34: 'moon',
-    35: 'moon and cloud',
-    36: 'moon and cloud',
-    37: 'moon and haze',
-    38: 'moon and cloud',
-    39: 'rain and cloud',
-    40: 'rain and cloud',
-    41: 'storm',
-    42: 'storm',
-    43: 'snow',
-    44: 'snow',
-}
+from sprite_enum import Sprite
 
 frame_rate = {
-    'disconnected': 1,
-    'loading': 6,
-    'sun': 0.5,
-    'sun and cloud': 0.5,
-    'sun and haze': 0.5,
-    'clouds': 0.5,
-    'fog': 0.5,
-    'rain': 6,
-    'rain and cloud': 6,
-    'storm': 6,
-    'snow': 2,
-    'snow and cloud': 2,
-    'hot': 6,
-    'cold': 12,
-    'wind': 6,
-    'moon': 0,
-    'moon and cloud': 0.5,
-    'moon and haze': 0,
+    Sprite.DISCONNECTED: 1,
+    Sprite.LOADING: 6,
+    Sprite.SUN: 0.5,
+    Sprite.SUN_AND_CLOUD: 0.5,
+    Sprite.SUN_AND_HAZE: 0.5,
+    Sprite.CLOUDS: 0.5,
+    Sprite.FOG: 0.5,
+    Sprite.RAIN: 6,
+    Sprite.RAIN_AND_CLOUD: 6,
+    Sprite.STORM: 6,
+    Sprite.SNOW: 2,
+    Sprite.SNOW_AND_CLOUD: 2,
+    Sprite.HOT: 6,
+    Sprite.COLD: 12,
+    Sprite.WIND: 6,
+    Sprite.MOON: 0,
+    Sprite.MOON_AND_CLOUD: 0.5,
+    Sprite.MOON_AND_HAZE: 0,
 }
 
-TWELVE_HR_FORMAT = clock_options.get('12hrFormat', False)
-OMIT_LEADING_ZERO = clock_options.get('omitLeadingZeros', False)
-DEMO = clock_options.get('demo', False)
-COLOR = clock_options.get('color', [255, 255, 255])
+TWELVE_HR_FORMAT = clock_options.get('12hrFormat')
+OMIT_LEADING_ZERO = clock_options.get('omitLeadingZeros')
+DEMO = clock_options.get('demo')
+COLOR = clock_options.get('color')
 
 filters = [('multiply', COLOR)]
 
@@ -112,12 +68,13 @@ def draw_weather():
     # Get sprite
     if (DEMO):
         sprite_index = int((time.time() / 5) % len(cache.keys()))
-        sprite_name = list(cache.keys())[sprite_index]
+        sprite_name_value = list(cache.keys())[sprite_index]
+        sprite_name = Sprite(sprite_name_value)
     else:
-        sprite_name = code_to_sprite.get(get_code(), None)
+        sprite_name = get_weather_sprite()
 
-    weather_sprite = cache.get(sprite_name, None)
-    if weather_sprite is None:
+    weather_sprite = cache.get(sprite_name.value, None)
+    if weather_sprite is None or len(weather_sprite) == 0:
         return
 
     # Get frame
@@ -148,10 +105,10 @@ def draw():
 if __name__ == '__main__':
 
     # Import sprites
-    digits_path = os.path.join(sys.path[0], 'sprites', 'digits.png')
+    digits_path = os.path.join(sys.path[0], '..', 'sprites', 'digits.png')
     import_sprite(digits_path, (8, 8), 1)
 
-    sprites_path = os.path.join(sys.path[0], 'sprites', 'weather_icons')
+    sprites_path = os.path.join(sys.path[0], '..', 'sprites', 'weather_icons')
     sprites_list = os.listdir(sprites_path)
 
     for filename in sprites_list:

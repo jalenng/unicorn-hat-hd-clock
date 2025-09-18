@@ -18,7 +18,7 @@ def get_time():
         return datetime.fromtimestamp(modded_time * 600)
     else:
         # Use real time
-        return datetime.now()
+        return datetime.now().astimezone()
 
 
 def update_time():
@@ -29,7 +29,7 @@ def update_time():
         if (os.system('ntpdate -u pool.ntp.org') == 0):
             time_updated = True
         else:
-            sleep_time = clock_options.get('retryInterval', 60)
+            sleep_time = clock_options.get('retryInterval')
             time.sleep(sleep_time)
 
 

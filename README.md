@@ -1,10 +1,14 @@
 # Unicorn HAT HD Clock
-Digital clock with weather status on a Pimoroni Unicorn HAT HD for the Raspberry Pi
+
+Digital clock with weather status on a [Pimoroni Unicorn HAT HD](https://shop.pimoroni.com/en-us/products/unicorn-hat-hd) for the Raspberry Pi
 
 This script relies on:
-- AccuWeather to retrieve weather information
-- https://sunrise-sunset.org/api for sunrise and sunset information to adjust the brightness accordingly
-## GIFs
+
+- [Open-Meteo](https://open-meteo.com) for weather data
+- [Sunrise Sunset](https://sunrise-sunset.org/api) for brightness adjustment based on sunrise and sunset times
+
+## Preview
+
 ![Photo of the clock](https://github.com/user-attachments/assets/63523a04-2027-4ba8-a1f9-cef3b82d814c)
 
 ![wind](https://github.com/user-attachments/assets/1e3cdf90-f307-4104-978f-d70bd5065171)
@@ -26,76 +30,88 @@ This script relies on:
 ![cold](https://github.com/user-attachments/assets/5fbc579d-75e7-4542-b8c9-ae6ab0c826dc)
 ![clouds](https://github.com/user-attachments/assets/5c29044c-39bd-4939-8cdc-ed4591a60242)
 
-## Instructions
-### I. Download the required files
-1. Clone this repository
-    - `git clone https://github.com/jalenng/unicorn-hat-hd-clock.git`
-2. Ensure you have Python 3 installed
-    - `python3 --version`
-3. Install the required dependencies:
-    - `pip install -r requirements.txt`
-    - `pip install -r requirements-sim.txt` (if using the [simulator](https://github.com/jayniz/unicorn-hat-sim))
-### II. Configure AccuWeather
-- You will need an AccuWeather API account to get an API key: https://developer.accuweather.com/
-- Find the AccuWeather location key for your location
-### III. Configure the options
-1. Open the file `options.json` with a text editor
-2. Make the desired edits to the file
-    - `clock`
-        | Name              | Default Value     | Description       |
-        | :---------------- | :---------------- | :---------------- |
-        | `12hrFormat`      | `true`            | If `true`, clock displays in 12-hour time. Otherwise, clock displays in 24-hour time.
-        | `demo`            | `false`           | If `true`, the time is sped up, and the screen cycles through the various icons
-        | `omitLeadingZeros`| `true`            | If `true`, the leading zeroes of the hour are dropped. Otherwise, include the leading zeros.
-        | `color`           | `[255, 255, 255]` | An array of values in RGB order. Determines the color of the clock.
-        | `retryInterval`   | `60`              | Time in seconds between retry attempts if the API call fails
-    - `led`
-        | Name              | Default Value     | Description       |
-        | :---------------- | :---------------- | :---------------- |
-        | `fps`             | `10`              | Desired framerate of the screen
-        | `minBrightness`   | `0.004`           | A float between 0.0 and 1.0 that determines the brightness of the screen during the night
-        | `maxBrightness`   | `0.5`             | A float between 0.0 and 1.0 that determines the brightness of the screen during the day
-        | `rotation`        | `180`             | Rotation of the screen
-    - `weather`
-        | Name              | Default Value     | Description       |
-        | :---------------- | :---------------- | :---------------- |
-        | `enabled`         | `true`            | If `true`, shows and updates weather information
-        | `apiKey`          | N/A               | **Important:** Insert your AccuWeather API key here 
-        | `locationKey`     | N/A               | **Important:** Insert your AccuWeather location key here
-        | `updateInterval`  | `1800`            | Time in seconds between API calls to get weather data
-        | `retryInterval`   | `60`              | Time in seconds between retry attempts if the API call fails
-    - `sunrise`
-        | Name              | Default Value     | Description       |
-        | :---------------- | :---------------- | :---------------- |
-        | `enabled`         | `true`            | If `true`, updates display brightness according to sunset and sunrise information. Otherwise, display brightness will constantly be at the average of `minBrightness` and `maxBrightness`
-        | `latitude`        | N/A               | **Important:** Insert your latitude for sunrise/sunset data
-        | `longitude`       | N/A               | **Important:** Insert your longitude for sunrise/sunset data
-        | `updateInterval`  | `86400`           | Time in seconds between API calls to get sunset/sunrise data
-        | `retryInterval`   | `60`              | Time in seconds between retry attempts if the API call fails
-3. Save your changes to the file
-### IV. Run the script
-- Run the script to make sure everything is working as intended
-    - `python3 main.py`
-### V. Schedule the script to run on startup
-We will use systemd to run this script on startup as a background process
+## 1. Install
 
-1. Create a file called `clock.service` with a text editor in `/etc/systemd/system`
-    - e.g. `sudo touch /etc/systemd/system/clock.service`
-2. Open the file you just created
-    - e.g. `sudo nano /etc/systemd/system/clock.service`
-3. Create the service file. Use this as an example:
-    ```
-    [Unit]
-    Description=Unicorn HAT HD Clock
-    Before=multi-user.target
+```bash
+git clone https://github.com/jalenng/unicorn-hat-hd-clock.git
+cd unicorn-hat-hd-clock
+pip3 install -r requirements.txt
+# for simulator support (https://github.com/jayniz/unicorn-hat-sim)
+pip3 install -r requirements-sim.txt
+```
 
-    [Service]
-    ExecStart=python3 <path to main.py>
-    Type=simple
-    Restart=always
+## 2. Configure
 
-    [Install]
-    WantedBy=multi-user.target
-    ```
-3. Enable the service
-    - `sudo systemctl enable /etc/systemd/system/clock.service`
+Edit `config/options.json` to customize:
+
+### `clock`
+
+| Name               | Default         | Description                                     |
+| :----------------- | :-------------- | :---------------------------------------------- |
+| `12hrFormat`       | `true`          | `true` = 12-hour (AM/PM), `false` = 24-hour     |
+| `demo`             | `false`         | Cycles through icons/time faster (testing mode) |
+| `omitLeadingZeros` | `true`          | Drop leading zero in hours (`09 → 9`)           |
+| `color`            | `[255,255,255]` | RGB values (0–255) for clock digits             |
+| `retryInterval`    | `60`            | Seconds between retry attempts if API fails     |
+
+### `led`
+
+| Name            | Default | Description                       |
+| :-------------- | :------ | :-------------------------------- |
+| `fps`           | `10`    | Display refresh rate              |
+| `minBrightness` | `0.1`   | Brightness at night (0.0–1.0)     |
+| `maxBrightness` | `1.0`   | Brightness at day (0.0–1.0)       |
+| `rotation`      | `0`     | Screen rotation (0, 90, 180, 270) |
+
+### `weather`
+
+| Name             | Default | Description                    |
+| :--------------- | :------ | :----------------------------- |
+| `enabled`        | `false` | `true` = show weather info     |
+| `updateInterval` | `1800`  | Seconds between API calls      |
+| `retryInterval`  | `60`    | Seconds between retry attempts |
+
+### `sunrise`
+
+| Name             | Default | Description                                                                                                                 |
+| :--------------- | :------ | :-------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`        | `false` | `true` = auto-adjust brightness with sunrise/sunset, `false` = constant average between `minBrightness` and `maxBrightness` |
+| `updateInterval` | `86400` | Seconds between API calls                                                                                                   |
+| `retryInterval`  | `60`    | Seconds between retry attempts                                                                                              |
+
+### `location`
+
+| Name        | Default | Description                                              |
+| :---------- | :------ | :------------------------------------------------------- |
+| `latitude`  | `0`     | **Required for weather and sunrise/sunset calculations** |
+| `longitude` | `0`     | **Required for weather and sunrise/sunset calculations** |
+
+## 3. Run
+
+```bash
+python3 src/main.py
+```
+
+## 4. Run on startup
+
+Create `/etc/systemd/clock.service`:
+
+```ini
+[Unit]
+Description=Unicorn HAT HD Clock
+Before=multi-user.target
+
+[Service]
+ExecStart=python3 <full path to src/main.py> # Update this path!
+Type=simple
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then enable it:
+
+```bash
+sudo systemctl enable /etc/systemd/clock.service
+```

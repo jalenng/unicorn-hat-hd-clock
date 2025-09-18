@@ -5,10 +5,10 @@ from options import led_options
 
 try:
     import unicornhathd as hat
-    print('Unicorn HAT HD module found.')
+    print('[LED] Unicorn HAT HD module found.')
 except ImportError:
     from unicorn_hat_sim import unicornhathd as hat
-    print('Unicorn HAT HD simulator module found.')
+    print('[LED] Unicorn HAT HD simulator module found.')
 
 width, height = hat.get_shape()
 
@@ -83,7 +83,7 @@ def show():
     for y in range(height):
         for x in range(width):
             px = [(int((buffer[y][x][i] + old_buffer[y][x][i])) / 2)
-                  for i in range(3)]
+                for i in range(3)]
             hat.set_pixel(*map_coords(x, y), *px)
 
     hat.show()
@@ -96,8 +96,8 @@ def off():
 
 
 def set_brightness(level):
-    min_val, max_val = led_options.get(
-        'minBrightness', 0.01), led_options.get('maxBrightness', 1.0)
+    min_val = led_options.get('minBrightness')
+    max_val = led_options.get('maxBrightness')
     brightness = min_val + ((max_val - min_val) * level)
     hat.brightness(brightness)
 
@@ -109,7 +109,7 @@ time_behind_max = 0.5
 def loop_draw(draw_func):
     global time_behind
 
-    secs_per_frame = 1 / led_options.get('fps', 10)
+    secs_per_frame = 1 / led_options.get('fps')
     try:
         while True:
             loop_start_time = time.time()
@@ -139,5 +139,5 @@ def loop_draw(draw_func):
         off()
 
 
-hat.rotation(led_options.get('rotation', 0))
+hat.rotation(led_options.get('rotation'))
 setup()

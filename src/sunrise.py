@@ -4,9 +4,8 @@ import requests
 from requests.exceptions import ConnectionError
 from time_system import get_time
 from datetime import datetime, timedelta, timezone
-from json import loads
 from json.decoder import JSONDecodeError
-from options import sunrise_options
+from options import sunrise_options, location_options
 
 sun_times = None
 
@@ -14,15 +13,19 @@ sun_times = None
 def fetch_sunrise_data_thread():
     global sun_times
 
+    update_interval = sunrise_options.get('updateInterval')
+    retry_interval = sunrise_options.get('retryInterval')
+
     # Define API call for sunrise info
     param_values = {
-        'lat': sunrise_options['latitude'],
-        'lng': sunrise_options['longitude'],
+        'lat': location_options['latitude'],
+        'lng': location_options['longitude'],
         'formatted': 0
     }
 
-    # Make the GET request, generate brightness levels, then wait before repeating
+    # Update loop
     while True:
+        success = False
 
         # Update parameter values with current day info
         utc_today = datetime.utcnow()
@@ -32,38 +35,44 @@ def fetch_sunrise_data_thread():
 
         # Convert to query string
         query = '&'.join(['%s=%s' % (k, v) for k, v in param_values.items()])
-        resource_url = f'https://api.sunrise-sunset.org/json?{query}'
+        url = f'https://api.sunrise-sunset.org/json?{query}'
 
         try:
-            response = requests.get(resource_url, verify=False)
-            results = loads(response.text)['results']
-            # Collect sunrise, sunset, and civil twilight begin and end times
+            print(f'[Sunrise] Sending request: {url}')
+            
+            response = requests.get(url, verify=False)
+            
+            print(f'[Sunrise] Response\n{response.text}')
 
+            # Collect sunrise, sunset, and civil twilight begin and end times
+            results = response.json().get('results')
             def get_time_delta(key):
                 value = datetime.fromisoformat(
                     results[key]).astimezone(tz=None)
                 return timedelta(hours=value.hour, minutes=value.minute)
 
-            keys = ['civil_twilight_begin', 'sunrise',
-                    'sunset', 'civil_twilight_end']
+            keys = [
+                'civil_twilight_begin',
+                'sunrise',
+                'sunset', 
+                'civil_twilight_end'
+            ]
             sun_times = {key: get_time_delta(key) for key in keys}
+            success = True
 
-            print('Sunrise data fetched: ')
+            print('[Sunrise] Retrieved sun_times')
             print('\n'.join([f'  {k}: {v}' for k, v in sun_times.items()]))
 
-        except (ConnectionError, JSONDecodeError, KeyError) as e:
-            print('Error fetching sunrise data:', e)
-            sun_times = None
+        except Exception as e:
+            print('[Sunrise] Error fetching data')
+            traceback.print_exc()
 
         # Wait for defined interval before repeating
-        update_interval = sunrise_options.get('updateInterval', 86400)
-        retry_interval = sunrise_options.get('retryInterval', 60)
-        sleep_time = retry_interval if sun_times == None else update_interval
+        sleep_time = update_interval if success else retry_interval
         time.sleep(sleep_time)
 
 
 def get_brightness_level():
-
     # If no sunrise data is available, return the average brightness level
     if sun_times is None:
         return 0.5
@@ -94,5 +103,5 @@ def get_brightness_level():
         return 0
 
 
-if sunrise_options.get('enabled', False):
+if sunrise_options.get('enabled'):
     thread.start_new_thread(fetch_sunrise_data_thread, ())

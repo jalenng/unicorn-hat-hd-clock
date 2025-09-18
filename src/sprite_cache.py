@@ -10,7 +10,7 @@ cache = {}
 
 def import_sprite(path, frame_size, spacing=0, name=None):
 
-    print(f'Caching sprite: {path}')
+    print(f'[Sprite Cache] Importing {path}')
 
     with Image.open(path) as img:
         frames = []
