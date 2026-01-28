@@ -1,5 +1,5 @@
 import time
-import _thread as thread
+import threading
 import requests
 import traceback
 from datetime import datetime, timezone
@@ -54,12 +54,16 @@ def fetch_weather_data_thread():
                 results.get('weather_code'), 
                 results.get('wind_speed_10m')
             )
-            forecast_items = [ForecastItem(*fields) for fields in zipped_lists]
-            success = True
+            new_items = [ForecastItem(*fields) for fields in zipped_lists]
+            if len(new_items) > 0:
+                forecast_items = new_items
+                success = True
+                print('[Weather] Retrieved forecast_items')
+                print(forecast_items)
+            else:
+                print('[Weather] Did not receive new forecast_items, keeping existing items')
 
-            print('[Weather] Retrieved forecast_items')
-            print(forecast_items)
-        except Exception as e:
+        except BaseException as e:
             print('[Weather] Error fetching data')
             traceback.print_exc()
 
@@ -152,4 +156,5 @@ def get_weather_sprite():
     
 
 if weather_options.get('enabled'):
-    thread.start_new_thread(fetch_weather_data_thread, ())
+    t = threading.Thread(target=fetch_weather_data_thread, daemon=True)
+    t.start()

@@ -1,6 +1,6 @@
 import os
 import time
-import _thread as thread
+import threading
 from datetime import datetime
 from options import clock_options
 
@@ -32,5 +32,5 @@ def update_time():
             sleep_time = clock_options.get('retryInterval')
             time.sleep(sleep_time)
 
-
-thread.start_new_thread(update_time, ())
+t = threading.Thread(target=update_time, daemon=True)
+t.start()

@@ -1,5 +1,6 @@
 import time
-import _thread as thread
+import threading
+import traceback
 import requests
 from requests.exceptions import ConnectionError
 from time_system import get_time
@@ -39,7 +40,7 @@ def fetch_sunrise_data_thread():
 
         try:
             print(f'[Sunrise] Sending request: {url}')
-            
+
             response = requests.get(url, verify=False)
             
             print(f'[Sunrise] Response\n{response.text}')
@@ -63,7 +64,7 @@ def fetch_sunrise_data_thread():
             print('[Sunrise] Retrieved sun_times')
             print('\n'.join([f'  {k}: {v}' for k, v in sun_times.items()]))
 
-        except Exception as e:
+        except BaseException as e:
             print('[Sunrise] Error fetching data')
             traceback.print_exc()
 
@@ -104,4 +105,5 @@ def get_brightness_level():
 
 
 if sunrise_options.get('enabled'):
-    thread.start_new_thread(fetch_sunrise_data_thread, ())
+    t = threading.Thread(target=fetch_sunrise_data_thread, daemon=True)
+    t.start()
